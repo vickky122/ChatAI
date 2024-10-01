@@ -17,7 +17,7 @@ function App() {
     setGeneratingAnswer(true);
     const userMessage = { type: "user", text: question };
     setChatHistory((prev) => [...prev, userMessage]);
-    setQuestion(""); // Clear input field
+    setQuestion(""); 
 
     try {
       const response = await axios({
@@ -34,7 +34,7 @@ function App() {
     } catch (error) {
       setChatHistory((prev) => [
         ...prev,
-        { type: "error", text: "Sorry - Something went wrong. Please try again!" },
+        { type: "error", text: "Sorry mate - Something something wrong happening. Please try again!" },
       ]);
     }
 
