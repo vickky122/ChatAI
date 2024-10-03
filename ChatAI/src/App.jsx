@@ -14,7 +14,6 @@ function App() {
   const [scrolling, setScrolling] = useState(false); 
   const chatWindowRef = useRef(null);
 
-  // heading movement after submitting and questino 
   const [hasAsked, setHasAsked] = useState(false);
 
   async function generateAnswer(e) {
@@ -68,7 +67,7 @@ function App() {
     setGeneratingAnswer(false);
   }
 
-
+  // Scroll event handler
   const handleScroll = () => {
     if (chatWindowRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = chatWindowRef.current;
@@ -76,7 +75,7 @@ function App() {
     }
   };
 
-  
+  // Reset chat
   function resetChat() {
     setActiveChat(null);
     setQuestion("");
@@ -112,16 +111,16 @@ function App() {
       {/* Chat Area */}
       <div className="bg-white flex-1 flex flex-col">
         <header className={`p-6 text-center transition-all ${hasAsked ? "heading-small" : "heading-large"}`}>
-          <h1 className="text-3xl font-bold text-blue-600">ChatAI Bot</h1>
+          <h1 className="text-5xl font-bold text-blue-600">ChatAI Bot</h1>
         </header>
 
         {/* Chat Window */}
         <div
-          className="flex-1 flex flex-col p-6 chat-window-container"
+          className="flex-1 flex flex-col p-6 chat-window-container overflow-y-auto"
           ref={chatWindowRef}
           onScroll={handleScroll}
         >
-          <div className="chat-window flex-1 overflow-y-auto bg-gray-100 p-4 rounded-md">
+          <div className="chat-window flex-1 bg-gray-100 p-4 rounded-md">
             {activeChat?.messages.length === 0 && (
               <p className="text-gray-500">Ask something to start the conversation...</p>
             )}
@@ -143,7 +142,7 @@ function App() {
           </div>
         </div>
 
-        {/* Question Input area and it is being fixed at bottom*/}
+        {/* Question Input - Always Fixed at Bottom */}
         <form onSubmit={generateAnswer} className="question-area fixed bottom-0 left-0 w-full p-4 bg-white shadow-md flex space-x-2">
           <textarea
             className="flex-1 p-2 border border-gray-300 rounded-md focus:border-blue-500"
@@ -159,7 +158,7 @@ function App() {
             }`}
             disabled={generatingAnswer}
           >
-            <BiSend size={24} />
+            <BiSend size={40} />
           </button>
         </form>
       </div>
