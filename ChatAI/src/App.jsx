@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import "./App.css";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
@@ -11,19 +11,25 @@ function App() {
   const [chatHistory, setChatHistory] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
   const [generatingAnswer, setGeneratingAnswer] = useState(false);
+  const [scrolling, setScrolling] = useState(false); 
+  const chatWindowRef = useRef(null);
+
+  // heading movement after submitting and questino 
+  const [hasAsked, setHasAsked] = useState(false);
 
   async function generateAnswer(e) {
     e.preventDefault();
     if (!question.trim()) return;
 
     setGeneratingAnswer(true);
+    setHasAsked(true);
     const userMessage = { type: "user", text: question };
     const updatedHistory = [...(activeChat?.messages || []), userMessage];
-    
+
     const newChat = activeChat
       ? { ...activeChat, messages: updatedHistory }
       : { id: chatHistory.length + 1, messages: updatedHistory };
-    
+
     setChatHistory((prev) =>
       activeChat
         ? prev.map((chat) =>
@@ -62,15 +68,25 @@ function App() {
     setGeneratingAnswer(false);
   }
 
+
+  const handleScroll = () => {
+    if (chatWindowRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = chatWindowRef.current;
+      setScrolling(scrollTop + clientHeight < scrollHeight);
+    }
+  };
+
+  
   function resetChat() {
     setActiveChat(null);
     setQuestion("");
+    setHasAsked(false);
   }
 
   return (
     <div className="flex h-screen">
       {/* Sidebar for Chat History */}
-      <div className="bg-gray-200 w-1/4 p-4 flex flex-col">
+      <div className={`bg-gray-200 w-1/4 p-4 flex flex-col ${scrolling ? "bg-blue-100" : ""}`}>
         <button
           className="flex items-center text-blue-500 mb-4 hover:text-blue-700"
           onClick={resetChat}
@@ -95,13 +111,16 @@ function App() {
 
       {/* Chat Area */}
       <div className="bg-white flex-1 flex flex-col">
-        {/* Heading */}
-        <header className="p-6 text-center">
+        <header className={`p-6 text-center transition-all ${hasAsked ? "heading-small" : "heading-large"}`}>
           <h1 className="text-3xl font-bold text-blue-600">ChatAI Bot</h1>
         </header>
 
         {/* Chat Window */}
-        <div className="flex-1 flex flex-col p-6">
+        <div
+          className="flex-1 flex flex-col p-6 chat-window-container"
+          ref={chatWindowRef}
+          onScroll={handleScroll}
+        >
           <div className="chat-window flex-1 overflow-y-auto bg-gray-100 p-4 rounded-md">
             {activeChat?.messages.length === 0 && (
               <p className="text-gray-500">Ask something to start the conversation...</p>
@@ -122,27 +141,27 @@ function App() {
               </div>
             )}
           </div>
-
-          {/* Question Input - Positioned at the Bottom */}
-          <form onSubmit={generateAnswer} className="mt-4 flex space-x-2">
-            <textarea
-              className="flex-1 p-2 border border-gray-300 rounded-md focus:border-blue-500"
-              placeholder="Ask anything..."
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              disabled={generatingAnswer}
-            />
-            <button
-              type="submit"
-              className={`bg-blue-500 text-white p-3 rounded-md hover:bg-blue-600 transition-all duration-300 flex items-center justify-center ${
-                generatingAnswer ? "opacity-50 cursor-not-allowed" : ""
-              }`}
-              disabled={generatingAnswer}
-            >
-              <BiSend size={24} />
-            </button>
-          </form>
         </div>
+
+        {/* Question Input area and it is being fixed at bottom*/}
+        <form onSubmit={generateAnswer} className="question-area fixed bottom-0 left-0 w-full p-4 bg-white shadow-md flex space-x-2">
+          <textarea
+            className="flex-1 p-2 border border-gray-300 rounded-md focus:border-blue-500"
+            placeholder="Ask anything..."
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            disabled={generatingAnswer}
+          />
+          <button
+            type="submit"
+            className={`bg-blue-500 text-white p-3 rounded-md hover:bg-blue-600 transition-all duration-300 flex items-center justify-center ${
+              generatingAnswer ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+            disabled={generatingAnswer}
+          >
+            <BiSend size={24} />
+          </button>
+        </form>
       </div>
     </div>
   );
