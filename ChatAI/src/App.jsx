@@ -4,10 +4,12 @@ import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import { BiSend } from "react-icons/bi";
 import { AiOutlineReload } from "react-icons/ai";
+import { FaPlusCircle } from "react-icons/fa";
 
 function App() {
   const [question, setQuestion] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
+  const [activeChat, setActiveChat] = useState(null);
   const [generatingAnswer, setGeneratingAnswer] = useState(false);
 
   async function generateAnswer(e) {
@@ -16,8 +18,21 @@ function App() {
 
     setGeneratingAnswer(true);
     const userMessage = { type: "user", text: question };
-    setChatHistory((prev) => [...prev, userMessage]);
-    setQuestion(""); 
+    const updatedHistory = [...(activeChat?.messages || []), userMessage];
+    
+    const newChat = activeChat
+      ? { ...activeChat, messages: updatedHistory }
+      : { id: chatHistory.length + 1, messages: updatedHistory };
+    
+    setChatHistory((prev) =>
+      activeChat
+        ? prev.map((chat) =>
+            chat.id === activeChat.id ? { ...chat, messages: updatedHistory } : chat
+          )
+        : [...prev, newChat]
+    );
+    setActiveChat(newChat);
+    setQuestion("");
 
     try {
       const response = await axios({
@@ -30,68 +45,104 @@ function App() {
         type: "ai",
         text: response["data"]["candidates"][0]["content"]["parts"][0]["text"],
       };
-      setChatHistory((prev) => [...prev, aiMessage]);
+
+      const updatedChat = { ...newChat, messages: [...updatedHistory, aiMessage] };
+      setChatHistory((prev) =>
+        prev.map((chat) => (chat.id === updatedChat.id ? updatedChat : chat))
+      );
+      setActiveChat(updatedChat);
     } catch (error) {
-      setChatHistory((prev) => [
-        ...prev,
-        { type: "error", text: "Sorry mate - Something something wrong happening. Please try again!" },
-      ]);
+      const errorMsg = { type: "error", text: "Something went wrong, try again!" };
+      setActiveChat({
+        ...newChat,
+        messages: [...updatedHistory, errorMsg],
+      });
     }
 
     setGeneratingAnswer(false);
   }
 
   function resetChat() {
-    setChatHistory([]);
+    setActiveChat(null);
     setQuestion("");
   }
 
   return (
-    <div className="bg-gradient-to-r from-blue-50 to-blue-100 h-screen flex flex-col justify-between items-center p-3">
-      <div className="w-full md:w-2/3 lg:w-1/2 xl:w-1/3 bg-white rounded-lg shadow-lg p-6 flex flex-col space-y-4">
-        <header className="text-center">
-          <h1 className="text-4xl font-bold text-blue-500 mb-4">Chat AI</h1>
-          <button
-            onClick={resetChat}
-            className="flex items-center justify-center text-blue-500 hover:text-red-500"
-          >
-            <AiOutlineReload size={24} />
-            <span className="ml-2">Reset Chat</span>
-          </button>
-        </header>
-
-        <div className="chat-window overflow-y-auto h-72 bg-gray-100 p-3 rounded-md">
-          {chatHistory.length === 0 && <p className="text-gray-500">Ask something to start the conversation...</p>}
-          {chatHistory.map((msg, idx) => (
+    <div className="flex h-screen">
+      {/* Sidebar for Chat History */}
+      <div className="bg-gray-200 w-1/4 p-4 flex flex-col">
+        <button
+          className="flex items-center text-blue-500 mb-4 hover:text-blue-700"
+          onClick={resetChat}
+        >
+          <FaPlusCircle className="mr-2" />
+          Start New Chat
+        </button>
+        <div className="flex-1 overflow-y-auto">
+          {chatHistory.map((chat) => (
             <div
-              key={idx}
-              className={`message ${msg.type === "user" ? "user-message" : "ai-message"} my-2`}
+              key={chat.id}
+              className={`p-2 mb-2 rounded cursor-pointer ${
+                activeChat?.id === chat.id ? "bg-blue-200" : "bg-white"
+              }`}
+              onClick={() => setActiveChat(chat)}
             >
-              <ReactMarkdown>{msg.text}</ReactMarkdown>
+              Chat {chat.id}
             </div>
           ))}
         </div>
+      </div>
 
-        <form onSubmit={generateAnswer} className="flex space-x-2">
-          <textarea
-            className="flex-1 p-2 border border-gray-300 rounded-md focus:border-blue-500"
-            placeholder="Ask anything..."
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            disabled={generatingAnswer}
-          />
-          <button
-            type="submit"
-            className={`bg-blue-500 text-white p-3 rounded-md hover:bg-blue-600 transition-all duration-300 flex items-center justify-center ${
-              generatingAnswer ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-            disabled={generatingAnswer}
-          >
-            <BiSend size={24} />
-          </button>
-        </form>
+      {/* Chat Area */}
+      <div className="bg-white flex-1 flex flex-col">
+        {/* Heading */}
+        <header className="p-6 text-center">
+          <h1 className="text-3xl font-bold text-blue-600">ChatAI Bot</h1>
+        </header>
 
-        {generatingAnswer && <p className="text-gray-500">Loading... Please wait.</p>}
+        {/* Chat Window */}
+        <div className="flex-1 flex flex-col p-6">
+          <div className="chat-window flex-1 overflow-y-auto bg-gray-100 p-4 rounded-md">
+            {activeChat?.messages.length === 0 && (
+              <p className="text-gray-500">Ask something to start the conversation...</p>
+            )}
+            {activeChat?.messages.map((msg, idx) => (
+              <div
+                key={idx}
+                className={`message ${
+                  msg.type === "user" ? "user-message" : "ai-message"
+                } my-2`}
+              >
+                <ReactMarkdown>{msg.text}</ReactMarkdown>
+              </div>
+            ))}
+            {generatingAnswer && (
+              <div className="typing-indicator">
+                <span></span><span></span><span></span>
+              </div>
+            )}
+          </div>
+
+          {/* Question Input - Positioned at the Bottom */}
+          <form onSubmit={generateAnswer} className="mt-4 flex space-x-2">
+            <textarea
+              className="flex-1 p-2 border border-gray-300 rounded-md focus:border-blue-500"
+              placeholder="Ask anything..."
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              disabled={generatingAnswer}
+            />
+            <button
+              type="submit"
+              className={`bg-blue-500 text-white p-3 rounded-md hover:bg-blue-600 transition-all duration-300 flex items-center justify-center ${
+                generatingAnswer ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+              disabled={generatingAnswer}
+            >
+              <BiSend size={24} />
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
